@@ -22,6 +22,27 @@ import ncompress
 import lzallright
 import sys
 
+def detect_uuid(data):
+    uuid_patterns = [
+        re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}', re.IGNORECASE),
+        re.compile(r'[0-9a-f]{32}', re.IGNORECASE)
+    ]
+    
+    uuids = []
+    
+    for pattern in uuid_patterns:
+        matches = pattern.findall(data)
+        for match in matches:
+            try:
+                if '-' not in match:
+                    match = str(uuid.UUID(match))
+                uuid_obj = uuid.UUID(match)
+                uuids.append((match, uuid_obj.version))
+            except ValueError:
+                continue
+                
+    return uuids
+	
 def shannon_entropy(data):
 	# 256 different possible values
 	possible = dict(((chr(x), 0) for x in range(0, 256)))
@@ -405,7 +426,11 @@ def analyse(data,prefix=''):
 			print(f"{prefix}Running analyse function with data b64 decoded")
 			b64_decoded = db64(decoded)
 			analyse(b64_decoded,f"{prefix}\t")
-
+    	# UUID Detection
+    	uuid_detected = detect_uuid(data.decode(errors='ignore'))
+	if uuid_detected:
+        	for uuid_str, version in uuid_detected:
+            	print(f"{prefix}UUID detected: {uuid_str}, Version: {version}")
 def main():
 	parser = argparse.ArgumentParser(description="wut - data identifier")
 	parser.add_argument("input", nargs='?', help="input data or filename", default="/dev/stdin")
